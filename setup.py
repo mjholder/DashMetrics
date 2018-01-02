@@ -7,7 +7,8 @@ setup(
   include_package_data = True,
   entry_points = {
     'console_scripts': [
-      'DashMetrics = DashMetrics.__main__:main'
+      'dm_populate = DashMetrics.__main__:main',
+      'dm_dash = DashMetrics.__dash__:main'
     ]
   }
 )
