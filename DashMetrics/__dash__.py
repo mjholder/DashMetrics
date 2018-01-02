@@ -2,69 +2,25 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from datetime import datetime as dt
+from getopt import getopt
+import sys
 import MySQLdb as mysqldb
 
-cnx = mysqldb.connect('localhost', 'root', '', 'testdb')
-cursor = cnx.cursor()
+cnx = None
+cursor = None
 
-# This is used for the day limits when seleting from the date range
-cursor.execute("select date from entries order by date ASC")
-time = cursor.fetchall()
-
-app = dash.Dash()
-
-app.layout = html.Div(children=[
-  html.H1(children='Cycle Metrics'),
-
-  dcc.Graph(
-    id = 'monthly'
-  ),
-  
-  dcc.DatePickerRange(
-    id = 'date-picker-monthly',
-    min_date_allowed = time[0][0],
-    max_date_allowed = time[-1][0],
-    start_date = time[0][0],
-    end_date = time[-1][0]
-  ),  
-  
-    dcc.Graph(
-    id = 'daily'
-  ),
-  
-  dcc.DatePickerRange(
-    id = 'date-picker-daily',
-    min_date_allowed = time[0][0],
-    max_date_allowed = time[-1][0],
-    start_date = time[0][0],
-    end_date = time[-1][0]
-  ),
-
-  dcc.Graph(
-    id = 'hourly',
-  ),
-
-  dcc.DatePickerRange(
-    id = 'date-picker-hourly',
-    min_date_allowed = time[0][0],
-    max_date_allowed = time[-1][0],
-    start_date = time[0][0],
-    end_date = time[-1][0]
-  ),
-
-  dcc.Graph(
-    id = 'bulk',
-  ),
-
-  dcc.DatePickerRange(
-    id = 'date-picker-bulk',
-    min_date_allowed = time[0][0],
-    max_date_allowed = time[-1][0],
-    start_date = time[0][0],
-    end_date = time[-1][0]
-  ),
-
-])
+def usage():
+  print " -w        Specify the ip for Dash to run on."
+  print "           Default ip is '0.0.0.0'."
+  print " -q        Specify the port for Dash to run on."
+  print "           Defualt port is '8050'."
+  print " -i        Specify the ip of the database you are"
+  print "           connecting to. Default is 'localhost'."
+  print " -u        The username for accessing the database."
+  print "           Default username is 'root'."
+  print " -p        The password for accessing the database."
+  print " -d        The name of the database (Required)"
+  print " -h        Displays this message and quits."
 
 # Daily
 @app.callback(
@@ -194,5 +150,98 @@ def update_bulk(end_date, start_date):
   }
 
 def main():
+  opts, _ = getopt(sys.argv[1:], "w:q:i:u:p:d:h")
+  global cnx
+  global cursor
+  i = 'localhost'
+  u = 'root'
+  p = ''
+  d = ''
+  q = ''
+  w = ''
+
+  for opt in opts:
+    if opt[0] == '-w':
+      w = opt[1]
+    if opt[0] == '-q':
+      q = opt[1]
+    if opt[0] == '-i':
+      i = opt[1]
+    if opt[0] == '-u':
+      u = opt[1]
+    if opt[0] == '-p':
+      p = opt[1]
+    if opt[0] == '-d':
+      d = opt[1]
+    if opt[0] == '-h':
+      usage()
+      sys.exit(0)
+
+  if d == '':
+    print "You must provide a database name and directory path."
+    usage()
+    sys.exit(0)
+
+  cnx = mysqldb.connect(i, u, p, d)
+  cursor = cnx.cursor()
+
+# This is used for the day limits when seleting from the date range
+  cursor.execute("select date from entries order by date ASC")
+  time = cursor.fetchall()
+
+  app = dash.Dash()
+
+  app.layout = html.Div(children=[
+    html.H1(children='Cycle Metrics'),
+
+    dcc.Graph(
+      id = 'monthly'
+    ),
+
+    dcc.DatePickerRange(
+      id = 'date-picker-monthly',
+      min_date_allowed = time[0][0],
+      max_date_allowed = time[-1][0],
+      start_date = time[0][0],
+      end_date = time[-1][0]
+    ),
+
+      dcc.Graph(
+      id = 'daily'
+    ),
+
+    dcc.DatePickerRange(
+      id = 'date-picker-daily',
+      min_date_allowed = time[0][0],
+      max_date_allowed = time[-1][0],
+      start_date = time[0][0],
+      end_date = time[-1][0]
+    ),
+
+    dcc.Graph(
+      id = 'hourly',
+    ),
+
+    dcc.DatePickerRange(
+      id = 'date-picker-hourly',
+      min_date_allowed = time[0][0],
+      max_date_allowed = time[-1][0],
+      start_date = time[0][0],
+      end_date = time[-1][0]
+    ),
+
+    dcc.Graph(
+      id = 'bulk',
+    ),
+
+    dcc.DatePickerRange(
+      id = 'date-picker-bulk',
+      min_date_allowed = time[0][0],
+      max_date_allowed = time[-1][0],
+      start_date = time[0][0],
+      end_date = time[-1][0]
+    ),
+
+  ])
   #if __name__ == '__main__':
   app.run_server(debug=True, host='0.0.0.0')
