@@ -31,3 +31,18 @@ dm_populate is used to populate a specified database with data.
 -h        Displays this message and quits.
 ```
 dm_dash runs the dash webapp on 0.0.0.0:8050 by default.
+```
+# dm_dash -h
+
+-w        Specify the ip for Dash to run on.
+          Default ip is '0.0.0.0'.
+-q        Specify the port for Dash to run on.
+          Defualt port is '8050'.
+-i        Specify the ip of the database you are
+          connecting to. Default is 'localhost'.
+-u        The username for accessing the database.
+          Default username is 'root'.
+-p        The password for accessing the database.
+-d        The name of the database (Required)
+-h        Displays this message and quits.
+```
