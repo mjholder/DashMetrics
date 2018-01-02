@@ -8,6 +8,9 @@ import MySQLdb as mysqldb
 
 cnx = None
 cursor = None
+app = dash.Dash()
+
+app.config['suppress_callback_exceptions']=True
 
 def usage():
   print " -w        Specify the ip for Dash to run on."
@@ -153,18 +156,19 @@ def main():
   opts, _ = getopt(sys.argv[1:], "w:q:i:u:p:d:h")
   global cnx
   global cursor
+  global app
   i = 'localhost'
   u = 'root'
   p = ''
   d = ''
-  q = ''
-  w = ''
+  q = 8050
+  w = '0.0.0.0'
 
   for opt in opts:
     if opt[0] == '-w':
       w = opt[1]
     if opt[0] == '-q':
-      q = opt[1]
+      q = int(opt[1])
     if opt[0] == '-i':
       i = opt[1]
     if opt[0] == '-u':
@@ -178,7 +182,7 @@ def main():
       sys.exit(0)
 
   if d == '':
-    print "You must provide a database name and directory path."
+    print "You must provide a database name."
     usage()
     sys.exit(0)
 
@@ -188,8 +192,6 @@ def main():
 # This is used for the day limits when seleting from the date range
   cursor.execute("select date from entries order by date ASC")
   time = cursor.fetchall()
-
-  app = dash.Dash()
 
   app.layout = html.Div(children=[
     html.H1(children='Cycle Metrics'),
@@ -244,4 +246,5 @@ def main():
 
   ])
   #if __name__ == '__main__':
-  app.run_server(debug=True, host='0.0.0.0')
+  app.run_server(debug=True, host=w, port=q)
+
