@@ -234,4 +234,3 @@ def main():
   monthly()
   print('Done!')
 
-main()
