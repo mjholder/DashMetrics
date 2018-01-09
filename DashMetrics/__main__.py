@@ -109,12 +109,12 @@ def hourly():
     for entry in entries:
       if(((entry[1].seconds - cur_time) >= 3600 or cur_date != str(entry[0])) and count != 0):
         cur_time = entry[1].seconds
+        cur_date = str(entry[0])
         cursor.execute("insert into hourly(date, time, main_last, backfill_last, backfill_mean) values('" + cur_date + "', '" + str(entry[1]) + "', " + str(avgs['ml']/count) + ", " + str(avgs['bl']/count) + ", " + str(avgs['bm']/count) + ")")
         avgs['ml'] = 0
         avgs['bl'] = 0
         avgs['bm'] = 0
         count = 0
-        cur_date = str(entry[0])
       else:
         count += 1
         avgs['ml'] += entry[2]

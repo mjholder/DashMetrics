@@ -1,6 +1,8 @@
+import datetime
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from textwrap import dedent as d
 from datetime import datetime as dt
 from getopt import getopt
 import sys
@@ -28,8 +30,8 @@ def usage():
 # Daily
 @app.callback(
   dash.dependencies.Output(component_id = 'daily', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-daily', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-daily', component_property = 'start_date')]
+  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date')]
 )
 def update_daily(end_date, start_date):
   cursor.execute("select * from daily where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
@@ -64,6 +66,8 @@ def update_daily(end_date, start_date):
    dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date')]
 )
 def update_monthly(end_date, start_date):
+  if start_date[-2:] != '01':
+    start_date = start_date[:-2] + '01'
   cursor.execute("select * from monthly where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
   raw_data_m = cursor.fetchall()
 
@@ -92,13 +96,12 @@ def update_monthly(end_date, start_date):
 # Hourly
 @app.callback(
   dash.dependencies.Output(component_id = 'hourly', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-hourly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-hourly', component_property = 'start_date')]
+  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date')]
 )
 def update_hourly(end_date, start_date):
   cursor.execute("select * from hourly where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
   raw_data_h = cursor.fetchall()
-
   data_h = {
     'date': [],
     'ml': [],
@@ -121,36 +124,55 @@ def update_hourly(end_date, start_date):
       'layout':{'title': 'Hourly'}
   }
 
+@app.callback(
+  dash.dependencies.Output(component_id = 'bulk', component_property = 'style'),
+  [dash.dependencies.Input(component_id = 'activator', component_property = 'values')]
+)
+def show_bulk(values):
+  if 'active' in values:
+    return {'visibility': 'visible'}
+  else:
+    return {'visibility': 'hidden'}
+
 # Bulk
 @app.callback(
   dash.dependencies.Output(component_id = 'bulk', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-bulk', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-bulk', component_property = 'start_date')]
+  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   dash.dependencies.Input(component_id = 'activator', component_property = 'values')]
 )
-def update_bulk(end_date, start_date):
-  cursor.execute("select * from entries where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
-  data = cursor.fetchall()
-  data_t = {
-    'date': [],
-    'ml': [],
-    'bl': [],
-    'bm': []
-  }
+def update_bulk(end_date, start_date, values):
+  if 'active' in values:
+    cursor.execute("select * from entries where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
+    data = cursor.fetchall()
+    data_t = {
+      'date': [],
+      'ml': [],
+      'bl': [],
+      'bm': []
+    }
 
-  for point in data:
-    data_t['date'].append(str(point[0]) + " " + str(point[1]))
-    data_t['ml'].append(point[2])
-    data_t['bl'].append(point[3])
-    data_t['bm'].append(point[4])
+    for point in data:
+      data_t['date'].append(str(point[0]) + " " + str(point[1]))
+      data_t['ml'].append(point[2])
+      data_t['bl'].append(point[3])
+      data_t['bm'].append(point[4])
 
-  return {
-    'data':[
-        {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
-        {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
-        {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
-      ],
-      'layout':{'title': 'All Points'}
-  }
+    return {
+      'data':[
+          {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
+          {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
+          {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
+        ],
+        'layout':{'title': 'All Points'}
+    }
+
+@app.callback(
+  dash.dependencies.Output(component_id = 'monthly', component_property = 'style'),
+  [dash.dependencies.Input(component_id = 'monthly', component_property = 'relayoutData')]
+)
+def display_selected_data(relayoutData):
+  print(relayoutData)
 
 def main():
   opts, _ = getopt(sys.argv[1:], "w:q:i:u:p:d:h")
@@ -163,7 +185,7 @@ def main():
   d = ''
   q = 8050
   w = '0.0.0.0'
-
+  
   for opt in opts:
     if opt[0] == '-w':
       w = opt[1]
@@ -192,59 +214,48 @@ def main():
 # This is used for the day limits when seleting from the date range
   cursor.execute("select date from entries order by date ASC")
   time = cursor.fetchall()
-
   app.layout = html.Div(children=[
-    html.H1(children='Cycle Metrics'),
+    html.H1(children='Cycle Metrics', style = {'text-align':'center'}),    
 
-    dcc.Graph(
-      id = 'monthly'
-    ),
+    html.Div('Select Date Range'),
 
     dcc.DatePickerRange(
       id = 'date-picker-monthly',
       min_date_allowed = time[0][0],
       max_date_allowed = time[-1][0],
       start_date = time[0][0],
-      end_date = time[-1][0]
+      end_date = time[-1][0],
     ),
 
-      dcc.Graph(
+    dcc.Checklist(
+      id = 'activator',
+      options=[
+        {'label': 'Show All Points', 'value': 'active'}
+      ],
+      values = [''],
+      style = {'text-align':'right'}
+    ),
+
+    dcc.Graph(
+      id = 'monthly',
+      relayoutData = {'points':[], 'range':None}
+    ),
+
+    dcc.Graph(
       id = 'daily'
-    ),
-
-    dcc.DatePickerRange(
-      id = 'date-picker-daily',
-      min_date_allowed = time[0][0],
-      max_date_allowed = time[-1][0],
-      start_date = time[0][0],
-      end_date = time[-1][0]
     ),
 
     dcc.Graph(
       id = 'hourly',
     ),
 
-    dcc.DatePickerRange(
-      id = 'date-picker-hourly',
-      min_date_allowed = time[0][0],
-      max_date_allowed = time[-1][0],
-      start_date = time[0][0],
-      end_date = time[-1][0]
-    ),
-
     dcc.Graph(
       id = 'bulk',
-    ),
-
-    dcc.DatePickerRange(
-      id = 'date-picker-bulk',
-      min_date_allowed = time[0][0],
-      max_date_allowed = time[-1][0],
-      start_date = time[0][0],
-      end_date = time[-1][0]
+      style = {'visibility': 'hidden'}
     ),
 
   ])
   #if __name__ == '__main__':
   app.run_server(debug=True, host=w, port=q)
 
+main()
