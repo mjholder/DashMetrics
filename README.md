@@ -22,7 +22,7 @@ dm_populate is used to populate a specified database with data. It fills the spe
 3. daily: this contains the average of the data points in hourly per day
 4. monthly: this contains the average of the data points in daily per month
 
-It takes, on average, 2 minutes for dm_populate to add 129,549 entries.
+It takes, on average, 2 minutes for dm_populate to add 130,000 entries.
 ```
 # dm_populate -h
 
