@@ -1,5 +1,14 @@
 # DashMetrics
 
+### Required packages
+```
+# pip install dash==0.20.0
+# pip install dash-renderer==0.11.2
+# pip install dash-html-components==0.8.0
+# pip install dash-core-components==0.18.0
+# pip install plotly --upgrade
+```
+
 ### Installing
 To install, clone this repo and go to the directory where setup.py is located and run
 ```
@@ -52,3 +61,4 @@ dm_dash runs the dash webapp on 0.0.0.0:8050 by default.
 -d        The name of the database (Required)
 -h        Displays this message and quits.
 ```
+When viewing the dash, the "All Points" graph is disabled by default due to it's tendencies to take a while to load/update.
