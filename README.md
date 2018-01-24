@@ -10,7 +10,11 @@
 ```
 
 ### Installing
-To install, clone this repo and go to the directory where setup.py is located and run
+To install, clone this repo
+```
+# git clone https://github.com/mjholder/DashMetrics.git
+```
+and go to the directory where setup.py is located and run
 ```
 # python setup.py bdist_rpm
 ```
