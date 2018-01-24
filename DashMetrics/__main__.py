@@ -82,7 +82,6 @@ def bulk(path):
       print("table entries already exists")
 
   for directory in os.listdir(path):
-    print(directory)
     for filename in os.listdir(path+directory):
       i = open(path+directory+'/'+filename)
       parse(i)
