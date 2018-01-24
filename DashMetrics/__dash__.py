@@ -9,10 +9,14 @@ import sys
 import MySQLdb as mysqldb
 import threading
 
+# defaults stores each graphs previous range. Index 0 and 1 are the x axis range.
+# 2 and 3 are the y axis range but reversed. Index 4 and 5 are used to say if the
+# corresponding axis was updated in the current date range where 4 is the x
+# axis and 5 is the y axis. 'h' is the hourly graph, 'd' is daily, 'm' is monthly,
+# 'b' is bulk, 'c' is the current range that every graph is compated too
 defaults = {'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]}
 cnx = None
 cursor = None
-last_changed = None
 app = dash.Dash()
 
 app.config['suppress_callback_exceptions']=True
@@ -31,6 +35,7 @@ def usage():
   print " -h        Displays this message and quits."
 
 # Daily
+# the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
   dash.dependencies.Output(component_id = 'daily', component_property = 'figure'),
   [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
@@ -75,6 +80,7 @@ def update_daily(end_date, start_date, h, d, m, b, figure):
            'layout': {'title': 'Daily', 'xaxis': {'range': figure['layout']['xaxis']['range']}, 'yaxis': {'range': figure['layout']['yaxis']['range']}}
     }
 # Monthly
+# the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
   dash.dependencies.Output(component_id = 'monthly', component_property = 'figure'),
   [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
@@ -149,8 +155,11 @@ def update_hourly(end_date, start_date, h, d, m, b):
     data_h['bl'].append(point[3])
     data_h['bm'].append(point[4])
   
+  # picked is which graph was zoomed in on
+  # if type is unicode than the graph was an x axis zoom, or an x and y axis zoom
+  # if type is float than it is only a y axis zoom
+  # if type is bool than the graph goes to default zoom
   picked = None
-  relay = None
   if b != None:
     if type(b.values()[0]) == unicode:
       if defaults['b'][0] != b.values()[0] or defaults['b'][1] != b.values()[1]:
@@ -238,8 +247,10 @@ def update_hourly(end_date, start_date, h, d, m, b):
       if defaults['m'][0] != m.values()[0] or defaults['m'][2] != m.values()[1]:
         defaults['m'] = [True,True,True,True,False,False]
         picked = 'm'
-
+  
+  # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
+    # if both the x and y axis have been zoomed in
     if defaults[picked][4] and defaults[picked][5]:
       defaults['c'] = defaults[picked][:4]
       return {'data':[
@@ -249,6 +260,7 @@ def update_hourly(end_date, start_date, h, d, m, b):
                 ],
                 'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
+    # if only zoomed into the x axis
     elif defaults[picked][4]:
       defaults['c'][:2] = defaults[picked][:2]
       return {'data':[
@@ -258,6 +270,7 @@ def update_hourly(end_date, start_date, h, d, m, b):
                 ],
                 'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
+    # if only zoomed into y axis
     elif defaults[picked][5]:
       defaults['c'][2:] = defaults[picked][2:4]
       return {'data':[
@@ -267,6 +280,7 @@ def update_hourly(end_date, start_date, h, d, m, b):
                 ],
                 'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
+    # this gets called if a graph has been double clicked on to resume default zoom scale
     else:
       defaults['c'] = [True,True,True,True]
       return {
@@ -277,7 +291,7 @@ def update_hourly(end_date, start_date, h, d, m, b):
           ],
           'layout':{'title': 'Hourly', 'xaxis': {'range': [True, True]}, 'yaxis': {'range': [True, True]}}
       }
-
+  # this gets called on startup or changing date range
   else:
     for e in defaults:
       defaults[e][4:] = [False,False]
@@ -303,6 +317,7 @@ def show_bulk(values):
 
 
 # Bulk
+# the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
   dash.dependencies.Output(component_id = 'bulk', component_property = 'figure'),
   [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
@@ -331,14 +346,39 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
       data_t['ml'].append(point[2])
       data_t['bl'].append(point[3])
       data_t['bm'].append(point[4])
-
-    return {'data':[
-           {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
-           {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
-           {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
-           ],
-           'layout': {'title': 'All Points', 'xaxis': {'range': figure['layout']['xaxis']['range']}, 'yaxis': {'range': figure['layout']['yaxis']['range']}}
-    }
+    # this series of if else's check which, if any, axises are in there default range
+    if figure['layout']['xaxis'].has_key('autorange') and figure['layout']['yaxis'].has_key('autorange'):
+      return {'data':[
+             {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
+             ],
+             'layout': {'title': 'All Points', 'xaxis': {'range': [True,True]}, 'yaxis': {'range': [True,True]}}
+      }
+    elif figure['layout']['yaxis'].has_key('autorange'):
+      return {'data':[
+             {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
+             ],
+             'layout': {'title': 'All Points', 'xaxis': {'range': figure['layout']['xaxis']['range']}, 'yaxis': {'range': [True,True]}}
+      }
+    elif figure['layout']['xaxis'].has_key('autorange'):
+      return {'data':[
+             {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
+             ],
+             'layout': {'title': 'All Points', 'xaxis': {'range': [True,True]}, 'yaxis': {'range': figure['layout']['yaxis']['range']}}
+      }
+    else:
+      return {'data':[
+             {'x': data_t['date'], 'y': data_t['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
+             {'x': data_t['date'], 'y': data_t['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
+             ],
+             'layout': {'title': 'All Points', 'xaxis': {'range': figure['layout']['xaxis']['range']}, 'yaxis': {'range': figure['layout']['yaxis']['range']}}
+      }
 
   else:
     return {
@@ -428,4 +468,3 @@ def main():
   ])
   if __name__ == '__main__':
     app.run_server(debug=True, host=w, port=q)
-
