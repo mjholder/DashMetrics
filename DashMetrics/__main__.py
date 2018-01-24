@@ -16,7 +16,7 @@ def usage():
   print " -d        Specify the name of the database. (Required)"
   print " -h        Displays this message and quits."
 
-def parse(in_file):
+def parse(in_file, filename):
   date = ''
   time = ''
   main_l = 0
@@ -66,7 +66,7 @@ def parse(in_file):
           back_m = line.split()[2]
           break
   except:
-    print("Error")
+    print("Error with file: " + str(filename))
 
   if date != '':
     with cnx:
@@ -82,10 +82,9 @@ def bulk(path):
       print("table entries already exists")
 
   for directory in os.listdir(path):
-    print(directory)
     for filename in os.listdir(path+directory):
       i = open(path+directory+'/'+filename)
-      parse(i)
+      parse(i, filename)
       i.close()
 
 def hourly():
@@ -233,4 +232,4 @@ def main():
   print('Creating monthly table')
   monthly()
   print('Done!')
-
+main()
