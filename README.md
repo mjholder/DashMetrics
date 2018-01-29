@@ -8,6 +8,7 @@
 # pip install dash-core-components==0.18.0
 # pip install plotly --upgrade
 ```
+Also it is required to use a MySQL database.
 
 ### Installing from Source
 To install, clone this repo
