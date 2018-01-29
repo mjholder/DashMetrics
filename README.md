@@ -9,7 +9,7 @@
 # pip install plotly --upgrade
 ```
 
-### Installing
+### Installing from Source
 To install, clone this repo
 ```
 # git clone https://github.com/mjholder/DashMetrics.git
@@ -21,6 +21,11 @@ and go to the directory where setup.py is located and run
 Install the rpm
 ```
 # yum install dist/DashMetrics-x.x_x.noarch.rpm
+```
+### Installing with RPM
+Download the rpm file and go to the directory where it's located, then install the rpm
+```
+# yum install Dash/Metrics-x.x_x.noarch.rpm
 ```
 ### Using
 There are two commands to use
@@ -49,7 +54,7 @@ It takes, on average, 2 minutes for dm_populate to add 130,000 entries.
 -d        Specify the name of the database. (Required)
 -h        Displays this message and quits.
 ```
-dm_dash runs the dash webapp on 0.0.0.0:8050 by default.
+dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default.
 ```
 # dm_dash -h
 
