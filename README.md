@@ -71,3 +71,8 @@ dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default.
 -h        Displays this message and quits.
 ```
 When viewing the dash, the "All Points" graph is disabled by default due to it's tendencies to take a while to load/update.
+### Uninstalling
+To uninstall run
+```
+# yum remove DashMetrics
+```
