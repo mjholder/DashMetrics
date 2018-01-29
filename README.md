@@ -25,7 +25,7 @@ Install the rpm
 ### Installing with RPM
 Download the rpm file and go to the directory where it's located, then install the rpm
 ```
-# yum install Dash/Metrics-x.x_x.noarch.rpm
+# yum install DashMetrics-x.x_x.noarch.rpm
 ```
 ### Using
 There are two commands to use
