@@ -16,6 +16,7 @@ def usage():
   print " -d        Specify the name of the database. (Required)"
   print " -h        Displays this message and quits."
 
+# this takes data from an input file and places the data into the entries table
 def parse(in_file, filename):
   date = ''
   time = ''
@@ -73,6 +74,7 @@ def parse(in_file, filename):
       cursor = cnx.cursor()
       cursor.execute("insert into entries(date, time, main_last, backfill_last, backfill_mean) values('" + date + "', '" + time + "', " + str(main_l) + ", " + str(back_l) + ", " + str(back_m) + ")") 
 
+# iterate through every input data file and create the entries table
 def bulk(path):
   with cnx:
     cursor = cnx.cursor()
@@ -87,6 +89,7 @@ def bulk(path):
       parse(i, filename)
       i.close()
 
+# populates the hourly table
 def hourly():
   with cnx:
     cursor = cnx.cursor()
@@ -122,6 +125,7 @@ def hourly():
 
     cursor.execute("insert into hourly(date, time, main_last, backfill_last, backfill_mean) values('" + cur_date + "', '" + str(entry[1]) + "', " + str(avgs['ml']/count) + ", " + str(avgs['bl']/count) + ", " + str(avgs['bm']/count) + ")")
       
+# populates the daily table
 def daily():
   with cnx:
     cursor = cnx.cursor()
@@ -156,6 +160,7 @@ def daily():
     
     cursor.execute("insert into daily(date, main_last, backfill_last, backfill_mean) values('" + str(cur_date) + "', " + str(avgs['ml']/count) + ", " + str(avgs['bl']/count) + ", " + str(avgs['bm']/count) + ")")
 
+# populates the monthly table
 def monthly():
   with cnx:
     cursor = cnx.cursor()
@@ -192,6 +197,7 @@ def monthly():
 
     cursor.execute("insert into monthly(date, main_last, backfill_last, backfill_mean) values('" + cur_date + "', " + str(avgs['ml']/count) + ", " + str(avgs['bl']/count) + ", " + str(avgs['bm']/count) + ")")
 
+# main controlling function
 def main():
   opts, _ = getopt(sys.argv[1:], "f:i:u:p:d:h")
   global cnx
@@ -232,4 +238,4 @@ def main():
   print('Creating monthly table')
   monthly()
   print('Done!')
-main()
+
