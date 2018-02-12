@@ -1,6 +1,8 @@
 import MySQLdb as mysqldb
 import os
 import sys
+import json
+import pkg_resources
 from getopt import getopt
 
 cnx = None
@@ -13,7 +15,7 @@ def usage():
   print " -u        The username for accessing the database."
   print "           Default username is 'root'"
   print " -p        The password for accessing the database."
-  print " -d        Specify the name of the database. (Required)"
+  print " -d        Specify the name of the database. Default is sdiag"
   print " -h        Displays this message and quits."
 
 # this takes data from an input file and places the data into the entries table
@@ -201,11 +203,21 @@ def monthly():
 def main():
   opts, _ = getopt(sys.argv[1:], "f:i:u:p:d:h")
   global cnx
-  i = 'localhost'
-  u = 'root'
-  p = ''
-  f = ''
-  d = ''
+  j_file = None
+  try:
+    resource_package = 'DashMetrics'
+    resource_path = '/'.join(('statics', 'config.json'))
+    conf = pkg_resources.resource_stream(resource_package, resource_path)
+    j_file = json.load(conf)
+  except:
+    print "ERROR: config.json not found."
+    return
+
+  f = j_file['directory']
+  i = j_file['db_ip']
+  u = j_file['db_username']
+  p = j_file['db_password']
+  d = j_file['db_name']
 
   for opt in opts:
     if opt[0] == '-f':
@@ -222,7 +234,7 @@ def main():
       usage()
       sys.exit(0)
 
-  if d == '' or f == '':
+  if f == '':
     print "You must provide a database name and directory path."
     usage()
     sys.exit(0)
@@ -238,4 +250,3 @@ def main():
   print('Creating monthly table')
   monthly()
   print('Done!')
-
