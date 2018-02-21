@@ -12,9 +12,9 @@ import pkg_resources
 import pandas as pd
 import urllib
 import json
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 
-# defaults stores each graphs previous range. Index 0 and 1 are the x axis range.
+# defaults is a list of dictionaries that stores each graphs previous range. Index 0 and 1 are the x axis range.
 # 2 and 3 are the y axis range but reversed. Index 4 and 5 are used to say if the
 # corresponding axis was updated in the current date range where 4 is the x
 # axis and 5 is the y axis. 'h' is the hourly graph, 'd' is daily, 'm' is monthly,
@@ -42,14 +42,14 @@ def usage():
 # Daily
 # the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
-  dash.dependencies.Output(component_id = 'daily', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'daily', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'monthly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'bulk', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'figure')]
+  Output(component_id = 'daily', component_property = 'figure'),
+  [Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   Input(component_id = 'hourly', component_property = 'relayoutData'),
+   Input(component_id = 'daily', component_property = 'relayoutData'),
+   Input(component_id = 'monthly', component_property = 'relayoutData'),
+   Input(component_id = 'bulk', component_property = 'relayoutData'),
+   Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_daily(end_date, start_date, h, d, m, b, figure):
   cursor.execute("select * from daily where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
@@ -86,14 +86,14 @@ def update_daily(end_date, start_date, h, d, m, b, figure):
 # Monthly
 # the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
-  dash.dependencies.Output(component_id = 'monthly', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'daily', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'monthly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'bulk', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'figure')]
+  Output(component_id = 'monthly', component_property = 'figure'),
+  [Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   Input(component_id = 'hourly', component_property = 'relayoutData'),
+   Input(component_id = 'daily', component_property = 'relayoutData'),
+   Input(component_id = 'monthly', component_property = 'relayoutData'),
+   Input(component_id = 'bulk', component_property = 'relayoutData'),
+   Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_monthly(end_date, start_date, h, d, m, b, figure):
   
@@ -134,15 +134,15 @@ def update_monthly(end_date, start_date, h, d, m, b, figure):
 
 # Hourly
 @app.callback(
-  dash.dependencies.Output(component_id = 'hourly', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'daily', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'monthly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'bulk', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'my_index', component_property = 'children'),
-   dash.dependencies.Input(component_id = 'ranges', component_property = 'children')]
+  Output(component_id = 'hourly', component_property = 'figure'),
+  [Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   Input(component_id = 'hourly', component_property = 'relayoutData'),
+   Input(component_id = 'daily', component_property = 'relayoutData'),
+   Input(component_id = 'monthly', component_property = 'relayoutData'),
+   Input(component_id = 'bulk', component_property = 'relayoutData'),
+   Input(component_id = 'my_index', component_property = 'children'),
+   Input(component_id = 'ranges', component_property = 'children')]
 )
 def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   global defaults
@@ -287,7 +287,8 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
                 'layout': {'title': 'Hourly', 'xaxis': {'range': defaults[index]['c'][:2]}, 'yaxis': {'range': defaults[index]['c'][2:]}}
       }
     # this gets called if a graph has been double clicked on to resume default zoom scale
-    elif ranges != (str(start_date) + "|" + str(end_date)):
+    else:
+      print picked
       defaults[index]['c'] = [True,True,True,True]
       return {
         'data':[
@@ -298,10 +299,15 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
           'layout':{'title': 'Hourly', 'xaxis': {'range': [True, True]}, 'yaxis': {'range': [True, True]}}
       }
   # this gets called on startup or changing date range
-#  elif ranges != (str(start_date) + "|" + str(end_date)):
+#  elif defaults[index]['i']:
   else:
-    for e in defaults[index]:
-      defaults[index][e][4:] = [False,False]
+    print defaults[index]['i']
+    print picked
+    defaults[index]['i'] = False
+    defaults[index]['h'][4:] = [False,False]
+    defaults[index]['b'][4:] = [False,False]
+    defaults[index]['d'][4:] = [False,False]
+    defaults[index]['m'][4:] = [False,False]
     defaults[index]['c'] = [True,True,True,True]
     return {
       'data':[
@@ -313,8 +319,8 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
     }
 
 @app.callback(
-  dash.dependencies.Output(component_id = 'bulk', component_property = 'style'),
-  [dash.dependencies.Input(component_id = 'activator', component_property = 'values')]
+  Output(component_id = 'bulk', component_property = 'style'),
+  [Input(component_id = 'activator', component_property = 'values')]
 )
 def show_bulk(values):
   if 'active' in values:
@@ -326,15 +332,15 @@ def show_bulk(values):
 # Bulk
 # the inclusion of the relayoutData for h, d, m, b is only to trigger this function
 @app.callback(
-  dash.dependencies.Output(component_id = 'bulk', component_property = 'figure'),
-  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
-   dash.dependencies.Input(component_id = 'activator', component_property = 'values'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'daily', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'monthly', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'bulk', component_property = 'relayoutData'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'figure')]
+  Output(component_id = 'bulk', component_property = 'figure'),
+  [Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   Input(component_id = 'activator', component_property = 'values'),
+   Input(component_id = 'hourly', component_property = 'relayoutData'),
+   Input(component_id = 'daily', component_property = 'relayoutData'),
+   Input(component_id = 'monthly', component_property = 'relayoutData'),
+   Input(component_id = 'bulk', component_property = 'relayoutData'),
+   Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_bulk(end_date, start_date, values, h, d, m, b, figure):
   if 'active' in values:
@@ -393,10 +399,10 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
     }
 
 @app.callback(
-  dash.dependencies.Output(component_id = 'download', component_property = 'href'),
-  [dash.dependencies.Input(component_id = 'graph-select', component_property = 'value'),
-   dash.dependencies.Input(component_id = 'hourly', component_property = 'figure'),
-   dash.dependencies.Input(component_id = 'my_index', component_property = 'children')]
+  Output(component_id = 'download', component_property = 'href'),
+  [Input(component_id = 'graph-select', component_property = 'value'),
+   Input(component_id = 'hourly', component_property = 'figure'),
+   Input(component_id = 'my_index', component_property = 'children')]
 )
 def download(value, hourly, index):
   has_time = False
@@ -443,22 +449,24 @@ def download(value, hourly, index):
 # holder is just needed to call this callback when anyone connects
 # this number is then used to access each users own defaults dictionary
 @app.callback(
-  dash.dependencies.Output(component_id = 'my_index', component_property = 'children'),
-  [dash.dependencies.Input(component_id = 'on_connect', component_property = 'children')]
+  Output(component_id = 'my_index', component_property = 'children'),
+  [Input(component_id = 'on_connect', component_property = 'children')]
 )
 def assign(o):
   global counter
   global defaults
   counter += 1
-  defaults.insert(counter, {'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
+  defaults.insert(counter, {'i': True, 'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
   return counter
 
 @app.callback(
-  dash.dependencies.Output(component_id = 'ranges', component_property = 'children'),
-  [dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
-   dash.dependencies.Input(component_id = 'date-picker-monthly', component_property = 'start_date'),]
+  Output(component_id = 'ranges', component_property = 'children'),
+  [Input(component_id = 'date-picker-monthly', component_property = 'end_date'),
+   Input(component_id = 'date-picker-monthly', component_property = 'start_date'),
+   Input(component_id = 'my_index', component_property = 'children')]
 )
-def assign(e, s):
+def assign(e, s, i):
+  defaults[i]['i'] = True
   return str(s) + "|" + str(e)
 
 def main():
