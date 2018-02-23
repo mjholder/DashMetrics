@@ -18,7 +18,8 @@ from dash.dependencies import Input, Output
 # 2 and 3 are the y axis range but reversed. Index 4 and 5 are used to say if the
 # corresponding axis was updated in the current date range where 4 is the x
 # axis and 5 is the y axis. 'h' is the hourly graph, 'd' is daily, 'm' is monthly,
-# 'b' is bulk, 'c' is the current range that every graph is compated too
+# 'b' is bulk, 'c' is the current range that every graph is compated too.
+# TODO: make defaults a table in the database rather than variable in this file
 defaults = []
 cnx = None
 cursor = None
@@ -52,6 +53,7 @@ def usage():
    Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_daily(end_date, start_date, h, d, m, b, figure):
+  print 'update_daily'
   cursor.execute("select * from daily where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
   data = cursor.fetchall()
   data_t = {
@@ -96,7 +98,7 @@ def update_daily(end_date, start_date, h, d, m, b, figure):
    Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_monthly(end_date, start_date, h, d, m, b, figure):
-  
+  print 'update_monthly'
   if start_date[-2:] != '01':
     start_date = start_date[:-2] + '01'
   cursor.execute("select * from monthly where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
@@ -146,6 +148,22 @@ def update_monthly(end_date, start_date, h, d, m, b, figure):
 )
 def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   global defaults
+  print 'update_hourly'
+  print 'Date range: ' + str(start_date) + ', ' + str(end_date)
+  print '----------------------------------------------------------------------------'
+  print 'input h: ' + str(h)
+  print '----------------------------------------------------------------------------'
+  print 'stored h: ' + str(defaults[index]['h'])
+  print '----------------------------------------------------------------------------'
+  print 'input d: ' + str(d)
+  print '----------------------------------------------------------------------------'
+  print 'stored d: ' + str(defaults[index]['d'])
+  print '----------------------------------------------------------------------------'
+  print 'input m: ' + str(m)
+  print '----------------------------------------------------------------------------'
+  print 'stored m: ' + str(defaults[index]['m'])
+  print '----------------------------------------------------------------------------'
+  print 'stored c: ' + str(defaults[index]['c'])
   cursor.execute("select * from hourly where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
   raw_data_h = cursor.fetchall()
   data_h = {
@@ -166,99 +184,105 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   # if type is float than it is only a y axis zoom
   # if type is bool than the graph goes to default zoom
   picked = None
-  if b != None:
-    if type(b.values()[0]) == unicode:
-      if defaults[index]['b'][0] != b.values()[0] or defaults[index]['b'][1] != b.values()[1]:
-        defaults[index]['b'][0] = b.values()[0]
-        defaults[index]['b'][1] = b.values()[1]
-        defaults[index]['b'][4] = True
-        if len(b.values()) > 2 and (b.values()[2] != defaults[index]['b'][3] or b.values()[3] != defaults[index]['b'][2]):
-          defaults[index]['b'][3] = b.values()[2]
-          defaults[index]['b'][2] = b.values()[3]
+  try:
+    if b != None:
+      if type(b.values()[0]) == unicode:
+        if defaults[index]['b'][0] != b.values()[0] or defaults[index]['b'][1] != b.values()[1]:
+          defaults[index]['b'][0] = b.values()[0]
+          defaults[index]['b'][1] = b.values()[1]
+          defaults[index]['b'][4] = True
+          if len(b.values()) > 2 and (b.values()[2] != defaults[index]['b'][3] or b.values()[3] != defaults[index]['b'][2]):
+            defaults[index]['b'][3] = b.values()[2]
+            defaults[index]['b'][2] = b.values()[3]
+            defaults[index]['b'][5] = True
+          picked = 'b'
+      elif type(b.values()[0]) == float:
+        if defaults[index]['b'][3] != b.values()[0] or my_defaults[index]['b'][2] != b.values()[1]:
+          defaults[index]['b'][3] = b.values()[0]
+          defaults[index]['b'][2] = b.values()[1]
           defaults[index]['b'][5] = True
-        picked = 'b'
-    elif type(b.values()[0]) == float:
-      if defaults[index]['b'][3] != b.values()[0] or my_defaults[index]['b'][2] != b.values()[1]:
-        defaults[index]['b'][3] = b.values()[0]
-        defaults[index]['b'][2] = b.values()[1]
-        defaults[index]['b'][5] = True
-        picked = 'b'
-    elif type(b.values()[0]) == bool:
-      if defaults[index]['b'][0] != b.values()[0] and (len(b.values()) == 1 or defaults[index]['b'][2] != b.values()[1]):
-        defaults[index]['b'] = [True,True,True,True,False,False]
-        picked = 'b'
+          picked = 'b'
+      elif type(b.values()[0]) == bool:
+        if (defaults[index]['b'][0] != b.values()[0] or defaults[index]['b'][2] != b.values()[1]) and not len(b.values()) == 1:
+          defaults[index]['b'] = [True,True,True,True,False,False]
+          picked = 'b'
 
-  if h != None:
-    if type(h.values()[0]) == unicode:
-      if defaults[index]['h'][0] != h.values()[0] or defaults[index]['h'][1] != h.values()[1]:
-        defaults[index]['h'][0] = h.values()[0]
-        defaults[index]['h'][1] = h.values()[1]
-        defaults[index]['h'][4] = True
-        if len(h.values()) > 2 and (h.values()[2] != defaults[index]['h'][3] or h.values()[3] != defaults[index]['h'][2]):
-          defaults[index]['h'][3] = h.values()[2]
-          defaults[index]['h'][2] = h.values()[3]
+    if h != None and picked == None:
+      if type(h.values()[0]) == unicode:
+        if defaults[index]['h'][0] != h.values()[0] or defaults[index]['h'][1] != h.values()[1]:
+          defaults[index]['h'][0] = h.values()[0]
+          defaults[index]['h'][1] = h.values()[1]
+          defaults[index]['h'][4] = True
+          if len(h.values()) > 2 and (h.values()[2] != defaults[index]['h'][3] or h.values()[3] != defaults[index]['h'][2]):
+            defaults[index]['h'][3] = h.values()[2]
+            defaults[index]['h'][2] = h.values()[3]
+            defaults[index]['h'][5] = True
+          picked = 'h'
+      elif type(h.values()[0]) == float:
+        if defaults[index]['h'][3] != h.values()[0] or defaults[index]['h'][2] != h.values()[1]:
+          defaults[index]['h'][3] = h.values()[0]
+          defaults[index]['h'][2] = h.values()[1]
           defaults[index]['h'][5] = True
-        picked = 'h'
-    elif type(h.values()[0]) == float:
-      if defaults[index]['h'][3] != h.values()[0] or defaults[index]['h'][2] != h.values()[1]:
-        defaults[index]['h'][3] = h.values()[0]
-        defaults[index]['h'][2] = h.values()[1]
-        defaults[index]['h'][5] = True
-        picked = 'h'
-    elif type(h.values()[0]) == bool:
-      if defaults[index]['h'][0] != h.values()[0] and (len(h.values()) == 1 or defaults[index]['h'][2] != h.values()[1]):
-        defaults[index]['h'] = [True,True,True,True,False,False]
-        picked = 'h'
+          picked = 'h'
+      elif type(h.values()[0]) == bool:
+        if (defaults[index]['h'][0] != h.values()[0] or defaults[index]['h'][2] != h.values()[1]) and not len(h.values()) == 1:
+          defaults[index]['h'] = [True,True,True,True,False,False]
+          picked = 'h'
 
-  if d != None:
-    if type(d.values()[0]) == unicode:
-      if defaults[index]['d'][0] != d.values()[0] or defaults[index]['d'][1] != d.values()[1]:
-        defaults[index]['d'][0] = d.values()[0]
-        defaults[index]['d'][1] = d.values()[1]
-        defaults[index]['d'][4] = True
-        if len(d.values()) > 2 and (d.values()[2] != defaults[index]['d'][3] or d.values()[3] != defaults[index]['d'][2]):
-          defaults[index]['d'][3] = d.values()[2]
-          defaults[index]['d'][2] = d.values()[3]
+    if d != None and picked == None:
+      if type(d.values()[0]) == unicode:
+        if defaults[index]['d'][0] != d.values()[0] or defaults[index]['d'][1] != d.values()[1]:
+          defaults[index]['d'][0] = d.values()[0]
+          defaults[index]['d'][1] = d.values()[1]
+          defaults[index]['d'][4] = True
+          if len(d.values()) > 2 and (d.values()[2] != defaults[index]['d'][3] or d.values()[3] != defaults[index]['d'][2]):
+            defaults[index]['d'][3] = d.values()[2]
+            defaults[index]['d'][2] = d.values()[3]
+            defaults[index]['d'][5] = True
+          picked = 'd'
+      elif type(d.values()[0]) == float:
+        if defaults[index]['d'][3] != d.values()[0] or defaults[index]['d'][2] != d.values()[1]:
+          defaults[index]['d'][3] = d.values()[0]
+          defaults[index]['d'][2] = d.values()[1]
           defaults[index]['d'][5] = True
-        picked = 'd'
-    elif type(d.values()[0]) == float:
-      if defaults[index]['d'][3] != d.values()[0] or defaults[index]['d'][2] != d.values()[1]:
-        defaults[index]['d'][3] = d.values()[0]
-        defaults[index]['d'][2] = d.values()[1]
-        defaults[index]['d'][5] = True
-        picked = 'd'
-    elif type(d.values()[0]) == bool:
-      if defaults[index]['d'][0] != d.values()[0] and (len(d.values()) == 1 or defaults[index]['d'][2] != d.values()[1]):
-        defaults[index]['d'] = [True,True,True,True,False,False]
-        picked = 'd'
+          picked = 'd'
+      elif type(d.values()[0]) == bool:
+        if (defaults[index]['d'][0] != d.values()[0] or  defaults[index]['d'][2] != d.values()[1]) and not len(d.values()) == 1:
+          defaults[index]['d'] = [True,True,True,True,False,False]
+          picked = 'd'
 
-  if m != None:
-    if type(m.values()[0]) == unicode:
-      if defaults[index]['m'][0] != m.values()[0] or defaults[index]['m'][1] != m.values()[1]:
-        defaults[index]['m'][0] = m.values()[0]
-        defaults[index]['m'][1] = m.values()[1]
-        defaults[index]['m'][4] = True
-        if len(m.values()) > 2 and (m.values()[2] != defaults[index]['m'][3] or m.values()[3] != defaults[index]['m'][2]):
-          defaults[index]['m'][3] = m.values()[2]
-          defaults[index]['m'][2] = m.values()[3]
+    if m != None and picked == None:
+      if type(m.values()[0]) == unicode:
+        if defaults[index]['m'][0] != m.values()[0] or defaults[index]['m'][1] != m.values()[1]:
+          defaults[index]['m'][0] = m.values()[0]
+          defaults[index]['m'][1] = m.values()[1]
+          defaults[index]['m'][4] = True
+          if m.values()[2] != defaults[index]['m'][3] or m.values()[3] != defaults[index]['m'][2]:
+            defaults[index]['m'][3] = m.values()[2]
+            defaults[index]['m'][2] = m.values()[3]
+            defaults[index]['m'][5] = True
+          picked = 'm'
+      elif type(m.values()[0]) == float:
+        if defaults[index]['m'][3] != m.values()[0] or defaults[index]['m'][2] != m.values()[1]:
+          defaults[index]['m'][3] = m.values()[0]
+          defaults[index]['m'][2] = m.values()[1]
           defaults[index]['m'][5] = True
-        picked = 'm'
-    elif type(m.values()[0]) == float:
-      if defaults[index]['m'][3] != m.values()[0] or defaults[index]['m'][2] != m.values()[1]:
-        defaults[index]['m'][3] = m.values()[0]
-        defaults[index]['m'][2] = m.values()[1]
-        defaults[index]['m'][5] = True
-        picked = 'm'
-    elif type(m.values()[0]) == bool:
-      if defaults[index]['m'][0] != m.values()[0] and (len(m.values()) == 1 or defaults[index]['m'][2] != m.values()[1]):
-        defaults[index]['m'] = [True,True,True,True,False,False]
-        picked = 'm'
-  
+          picked = 'm'
+      elif type(m.values()[0]) == bool:
+        if (defaults[index]['m'][0] != m.values()[0] or defaults[index]['m'][2] != m.values()[1]) and not len(m.values()) == 1:
+          defaults[index]['m'] = [True,True,True,True,False,False]
+          picked = 'm'
+
+  except IndexError:
+    picked = None
+
+  print picked
   # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
     # if both the x and y axis have been zoomed in
     if defaults[index][picked][4] and defaults[index][picked][5]:
       defaults[index]['c'] = defaults[index][picked][:4]
+      print 'new c: ' + str(defaults[index]['c'])
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
@@ -269,6 +293,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
     # if only zoomed into the x axis
     elif defaults[index][picked][4]:
       defaults[index]['c'][:2] = defaults[index][picked][:2]
+      print 'new c: ' + str(defaults[index]['c'])
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
@@ -279,6 +304,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
     # if only zoomed into y axis
     elif defaults[index][picked][5]:
       defaults[index]['c'][2:] = defaults[index][picked][2:4]
+      print 'new c: ' + str(defaults[index]['c'])
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
@@ -288,8 +314,8 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
       }
     # this gets called if a graph has been double clicked on to resume default zoom scale
     else:
-      print picked
       defaults[index]['c'] = [True,True,True,True]
+      print 'new c: ' + str(defaults[index]['c'])
       return {
         'data':[
             {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
@@ -298,17 +324,18 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
           ],
           'layout':{'title': 'Hourly', 'xaxis': {'range': [True, True]}, 'yaxis': {'range': [True, True]}}
       }
-  # this gets called on startup or changing date range
-#  elif defaults[index]['i']:
+  # this gets called on startup or changing date range and for some reason
+  # we have a chance of getting here from interaction with other components
+  # such as the download text or closing the downloads bar in Chrome
   else:
-    print defaults[index]['i']
-    print picked
+#  elif defaults[index]['i'] or defaults[index]['dates'] != [str(start_date), str(end_date)]:
     defaults[index]['i'] = False
     defaults[index]['h'][4:] = [False,False]
     defaults[index]['b'][4:] = [False,False]
     defaults[index]['d'][4:] = [False,False]
     defaults[index]['m'][4:] = [False,False]
     defaults[index]['c'] = [True,True,True,True]
+    defaults[index]['dates'] = [str(start_date), str(end_date)]
     return {
       'data':[
           {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
@@ -323,6 +350,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   [Input(component_id = 'activator', component_property = 'values')]
 )
 def show_bulk(values):
+  print 'show_bulk'
   if 'active' in values:
     return {'visibility': 'visible'}
   else:
@@ -343,6 +371,7 @@ def show_bulk(values):
    Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_bulk(end_date, start_date, values, h, d, m, b, figure):
+  print 'update_bulk'
   if 'active' in values:
     cursor.execute("select * from entries where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
     data = cursor.fetchall()
@@ -405,6 +434,7 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
    Input(component_id = 'my_index', component_property = 'children')]
 )
 def download(value, hourly, index):
+  print 'download'
   has_time = False
   if hourly['layout']['xaxis'].has_key('autorange'):
     try:
@@ -453,10 +483,11 @@ def download(value, hourly, index):
   [Input(component_id = 'on_connect', component_property = 'children')]
 )
 def assign(o):
+  print 'assign(o)'
   global counter
   global defaults
   counter += 1
-  defaults.insert(counter, {'i': True, 'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
+  defaults.insert(counter, {'dates': ['', ''],'i': True, 'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
   return counter
 
 @app.callback(
@@ -466,10 +497,12 @@ def assign(o):
    Input(component_id = 'my_index', component_property = 'children')]
 )
 def assign(e, s, i):
+  print 'assign(e, s, i)'
   defaults[i]['i'] = True
   return str(s) + "|" + str(e)
 
 def main():
+  print 'main'
   opts, _ = getopt(sys.argv[1:], "w:q:i:u:p:d:h")
   global cnx
   global cursor
