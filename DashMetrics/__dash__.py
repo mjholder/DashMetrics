@@ -19,11 +19,11 @@ from dash.dependencies import Input, Output
 # axis and 5 is the y axis. 'h' is the hourly graph, 'd' is daily, 'm' is monthly,
 # 'b' is bulk, 'c' is the current range that every graph is compated too.
 # TODO: make defaults a table in the database rather than variable in this file
-defaults = []
+# defaults = []
 cnx = None
 cursor = None
 app = dash.Dash()
-counter = -1
+counter = 0
 app.config['suppress_callback_exceptions']=True
 
 def usage():
@@ -131,6 +131,34 @@ def update_monthly(end_date, start_date, h, d, m, b, figure):
            'layout': {'title': 'Monthly', 'xaxis': {'range': figure['layout']['xaxis']['range']}, 'yaxis': {'range': figure['layout']['yaxis']['range']}}
     }
 
+def defaults_unpacker(values):
+  output = []
+  for v in range(0, 4):
+    if values[v] == 'True':
+      output.append(True)
+    else:
+      try:
+        output.append(float(values[v]))
+      except:
+        output.append(values[v])
+        
+  try:
+    output.append(bool(values[4]))
+    output.append(bool(values[5]))
+  except IndexError:
+    # This only happens for prev_c which doesn't have x_changed and y_changed 
+    pass
+
+  return output
+
+def defaults_packer(defaults, index):
+  cursor.execute("replace into prev_m(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['m'][0]) + "', '" + str(defaults['m'][1])+ "', '" + str(defaults['m'][2]) + "', '" + str(defaults['m'][3]) + "', " + str(int(defaults['m'][4])) + ", " + str(int(defaults['m'][5])) + ")")
+  cursor.execute("replace into prev_h(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['h'][0]) + "', '" + str(defaults['h'][1])+ "', '" + str(defaults['h'][2]) + "', '" + str(defaults['h'][3]) + "', " + str(int(defaults['h'][4])) + ", " + str(int(defaults['h'][5])) + ")")
+  cursor.execute("replace into prev_d(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['d'][0]) + "', '" + str(defaults['d'][1])+ "', '" + str(defaults['d'][2]) + "', '" + str(defaults['d'][3]) + "', " + str(int(defaults['d'][4])) + ", " + str(int(defaults['d'][5])) + ")")
+  cursor.execute("replace into prev_b(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['b'][0]) + "', '" + str(defaults['b'][1])+ "', '" + str(defaults['b'][2]) + "', '" + str(defaults['b'][3]) + "', " + str(int(defaults['b'][4])) + ", " + str(int(defaults['b'][5])) + ")")
+  cursor.execute("replace into prev_c(id, x_start, x_end, y_start, y_end) values(" + str(index) + ",'" + str(defaults['c'][0]) + "', '" + str(defaults['c'][1])+ "', '" + str(defaults['c'][2]) + "', '" + str(defaults['c'][3]) + "')")
+  cursor.execute("replace into last_picked(id, picked) values(" + str(index) + ", '" + str(defaults['lp']) + "')")
+
 # Hourly
 @app.callback(
   Output(component_id = 'hourly', component_property = 'figure'),
@@ -144,7 +172,37 @@ def update_monthly(end_date, start_date, h, d, m, b, figure):
    Input(component_id = 'ranges', component_property = 'children')]
 )
 def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
-  global defaults
+  defaults = {
+    'h': [],
+    'd': [],
+    'b': [],
+    'm': [],
+    'c': [],
+    'lp': ''
+  }
+
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_h where id = " + str(index))
+  defaults['h'] = defaults_unpacker(cursor.fetchall()[0])
+
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_b where id = " + str(index))
+  defaults['b'] = defaults_unpacker(cursor.fetchall()[0])
+
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_d where id = " + str(index))
+  defaults['d'] = defaults_unpacker(cursor.fetchall()[0])
+
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_m where id = " + str(index))
+  defaults['m'] = defaults_unpacker(cursor.fetchall()[0])
+
+  cursor.execute("select x_start, x_end, y_start, y_end from prev_c where id = " + str(index))
+  defaults['c'] = defaults_unpacker(cursor.fetchall()[0])
+
+  cursor.execute("select picked from last_picked where id = " + str(index))
+  lp = cursor.fetchall()[0][0]
+  if lp == 'None':
+    defaults['lp'] = None
+  else:
+    defaults['lp'] = lp
+  
   cursor.execute("select * from hourly where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
   raw_data_h = cursor.fetchall()
   data_h = {
@@ -168,130 +226,142 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   try:
     if b != None:
       if type(b.values()[0]) == unicode:
-        if defaults[index]['b'][0] != b.values()[0] or defaults[index]['b'][1] != b.values()[1]:
-          defaults[index]['b'][0] = b.values()[0]
-          defaults[index]['b'][1] = b.values()[1]
-          defaults[index]['b'][4] = True
-          if len(b.values()) > 2 and (b.values()[2] != defaults[index]['b'][3] or b.values()[3] != defaults[index]['b'][2]):
-            defaults[index]['b'][3] = b.values()[2]
-            defaults[index]['b'][2] = b.values()[3]
-            defaults[index]['b'][5] = True
+        if defaults['b'][0] != b.values()[0] or defaults['b'][1] != b.values()[1]:
+          defaults['b'][0] = b.values()[0]
+          defaults['b'][1] = b.values()[1]
+          defaults['b'][4] = True
+          if len(b.values()) > 2 and (b.values()[2] != defaults['b'][3] or b.values()[3] != defaults['b'][2]):
+            defaults['b'][3] = b.values()[2]
+            defaults['b'][2] = b.values()[3]
+            defaults['b'][5] = True
           picked = 'b'
       elif type(b.values()[0]) == float:
-        if defaults[index]['b'][3] != b.values()[0] or my_defaults[index]['b'][2] != b.values()[1]:
-          defaults[index]['b'][3] = b.values()[0]
-          defaults[index]['b'][2] = b.values()[1]
-          defaults[index]['b'][5] = True
+        if defaults['b'][3] != b.values()[0] or my_defaults['b'][2] != b.values()[1]:
+          defaults['b'][3] = b.values()[0]
+          defaults['b'][2] = b.values()[1]
+          defaults['b'][5] = True
           picked = 'b'
       elif type(b.values()[0]) == bool:
-        if (defaults[index]['b'][0] != b.values()[0] or defaults[index]['b'][2] != b.values()[1]) and not len(b.values()) == 1:
-          defaults[index]['b'] = [True,True,True,True,False,False]
+        if (defaults['b'][0] != b.values()[0] or defaults['b'][2] != b.values()[1]) and not len(b.values()) == 1:
+          defaults['b'] = [True,True,True,True,False,False]
           picked = 'b'
 
     if h != None and picked == None:
       if type(h.values()[0]) == unicode:
-        if defaults[index]['h'][0] != h.values()[0] or defaults[index]['h'][1] != h.values()[1]:
-          defaults[index]['h'][0] = h.values()[0]
-          defaults[index]['h'][1] = h.values()[1]
-          defaults[index]['h'][4] = True
-          if len(h.values()) > 2 and (h.values()[2] != defaults[index]['h'][3] or h.values()[3] != defaults[index]['h'][2]):
-            defaults[index]['h'][3] = h.values()[2]
-            defaults[index]['h'][2] = h.values()[3]
-            defaults[index]['h'][5] = True
+        if defaults['h'][0] != h.values()[0] or defaults['h'][1] != h.values()[1]:
+          defaults['h'][0] = h.values()[0]
+          defaults['h'][1] = h.values()[1]
+          defaults['h'][4] = True
+          if len(h.values()) > 2 and (h.values()[2] != defaults['h'][3] or h.values()[3] != defaults['h'][2]):
+            defaults['h'][3] = h.values()[2]
+            defaults['h'][2] = h.values()[3]
+            defaults['h'][5] = True
           picked = 'h'
       elif type(h.values()[0]) == float:
-        if defaults[index]['h'][3] != h.values()[0] or defaults[index]['h'][2] != h.values()[1]:
-          defaults[index]['h'][3] = h.values()[0]
-          defaults[index]['h'][2] = h.values()[1]
-          defaults[index]['h'][5] = True
+        if defaults['h'][3] != h.values()[0] or defaults['h'][2] != h.values()[1]:
+          defaults['h'][3] = h.values()[0]
+          defaults['h'][2] = h.values()[1]
+          defaults['h'][5] = True
           picked = 'h'
       elif type(h.values()[0]) == bool:
-        if (defaults[index]['h'][0] != h.values()[0] or defaults[index]['h'][2] != h.values()[1]) and not len(h.values()) == 1:
-          defaults[index]['h'] = [True,True,True,True,False,False]
+        if (defaults['h'][0] != h.values()[0] or defaults['h'][2] != h.values()[1]) and not len(h.values()) == 1:
+          defaults['h'] = [True,True,True,True,False,False]
           picked = 'h'
 
     if d != None and picked == None:
       if type(d.values()[0]) == unicode:
-        if defaults[index]['d'][0] != d.values()[0] or defaults[index]['d'][1] != d.values()[1]:
-          defaults[index]['d'][0] = d.values()[0]
-          defaults[index]['d'][1] = d.values()[1]
-          defaults[index]['d'][4] = True
-          if len(d.values()) > 2 and (d.values()[2] != defaults[index]['d'][3] or d.values()[3] != defaults[index]['d'][2]):
-            defaults[index]['d'][3] = d.values()[2]
-            defaults[index]['d'][2] = d.values()[3]
-            defaults[index]['d'][5] = True
+        if defaults['d'][0] != d.values()[0] or defaults['d'][1] != d.values()[1]:
+          defaults['d'][0] = d.values()[0]
+          defaults['d'][1] = d.values()[1]
+          defaults['d'][4] = True
+          if len(d.values()) > 2 and (d.values()[2] != defaults['d'][3] or d.values()[3] != defaults['d'][2]):
+            defaults['d'][3] = d.values()[2]
+            defaults['d'][2] = d.values()[3]
+            defaults['d'][5] = True
           picked = 'd'
       elif type(d.values()[0]) == float:
-        if defaults[index]['d'][3] != d.values()[0] or defaults[index]['d'][2] != d.values()[1]:
-          defaults[index]['d'][3] = d.values()[0]
-          defaults[index]['d'][2] = d.values()[1]
-          defaults[index]['d'][5] = True
+        if defaults['d'][3] != d.values()[0] or defaults['d'][2] != d.values()[1]:
+          defaults['d'][3] = d.values()[0]
+          defaults['d'][2] = d.values()[1]
+          defaults['d'][5] = True
           picked = 'd'
       elif type(d.values()[0]) == bool:
-        if (defaults[index]['d'][0] != d.values()[0] or  defaults[index]['d'][2] != d.values()[1]) and not len(d.values()) == 1:
-          defaults[index]['d'] = [True,True,True,True,False,False]
+        if (defaults['d'][0] != d.values()[0] or  defaults['d'][2] != d.values()[1]) and not len(d.values()) == 1:
+          defaults['d'] = [True,True,True,True,False,False]
           picked = 'd'
 
     if m != None and picked == None:
       if type(m.values()[0]) == unicode:
-        if defaults[index]['m'][0] != m.values()[0] or defaults[index]['m'][1] != m.values()[1]:
-          defaults[index]['m'][0] = m.values()[0]
-          defaults[index]['m'][1] = m.values()[1]
-          defaults[index]['m'][4] = True
-          if m.values()[2] != defaults[index]['m'][3] or m.values()[3] != defaults[index]['m'][2]:
-            defaults[index]['m'][3] = m.values()[2]
-            defaults[index]['m'][2] = m.values()[3]
-            defaults[index]['m'][5] = True
+        if defaults['m'][0] != m.values()[0] or defaults['m'][1] != m.values()[1]:
+          defaults['m'][0] = m.values()[0]
+          defaults['m'][1] = m.values()[1]
+          defaults['m'][4] = True
+          if m.values()[2] != defaults['m'][3] or m.values()[3] != defaults['m'][2]:
+            defaults['m'][3] = m.values()[2]
+            defaults['m'][2] = m.values()[3]
+            defaults['m'][5] = True
           picked = 'm'
       elif type(m.values()[0]) == float:
-        if defaults[index]['m'][3] != m.values()[0] or defaults[index]['m'][2] != m.values()[1]:
-          defaults[index]['m'][3] = m.values()[0]
-          defaults[index]['m'][2] = m.values()[1]
-          defaults[index]['m'][5] = True
+        if defaults['m'][3] != m.values()[0] or defaults['m'][2] != m.values()[1]:
+          defaults['m'][3] = m.values()[0]
+          defaults['m'][2] = m.values()[1]
+          defaults['m'][5] = True
           picked = 'm'
       elif type(m.values()[0]) == bool:
-        if (defaults[index]['m'][0] != m.values()[0] or defaults[index]['m'][2] != m.values()[1]) and not len(m.values()) == 1:
-          defaults[index]['m'] = [True,True,True,True,False,False]
+        if (defaults['m'][0] != m.values()[0] or defaults['m'][2] != m.values()[1]) and not len(m.values()) == 1:
+          defaults['m'] = [True,True,True,True,False,False]
           picked = 'm'
 
   except IndexError:
     picked = None
+  
+  try:
+    if len(m.values()) == 1 and len(h.values()) == 1 and len(b.values()) == 1 and len(d.values()) == 1:
+      picked = defaults['lp']
+      defaults[picked][4:] = [True, True]
+  except:
+    pass
 
   # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
+    defaults['lp'] = picked;
     # if both the x and y axis have been zoomed in
-    if defaults[index][picked][4] and defaults[index][picked][5]:
-      defaults[index]['c'] = defaults[index][picked][:4]
+    if defaults[picked][4] and defaults[picked][5]:
+      defaults['c'] = defaults[picked][:4]
+      defaults_packer(defaults, index)
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
                 ],
-                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults[index]['c'][:2]}, 'yaxis': {'range': defaults[index]['c'][2:]}}
+                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
     # if only zoomed into the x axis
-    elif defaults[index][picked][4]:
-      defaults[index]['c'][:2] = defaults[index][picked][:2]
+    elif defaults[picked][4]:
+      defaults['c'][:2] = defaults[picked][:2]
+      defaults_packer(defaults, index)
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
                 ],
-                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults[index]['c'][:2]}, 'yaxis': {'range': defaults[index]['c'][2:]}}
+                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
     # if only zoomed into y axis
-    elif defaults[index][picked][5]:
-      defaults[index]['c'][2:] = defaults[index][picked][2:4]
+    elif defaults[picked][5]:
+      defaults['c'][2:] = defaults[picked][2:4]
+      defaults_packer(defaults, index)
       return {'data':[
                 {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bl'], 'type': 'line', 'name': 'Backfill Last Cycle'},
                 {'x': data_h['date'], 'y': data_h['bm'], 'type': 'line', 'name': 'Backfill Mean Cycle'},
                 ],
-                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults[index]['c'][:2]}, 'yaxis': {'range': defaults[index]['c'][2:]}}
+                'layout': {'title': 'Hourly', 'xaxis': {'range': defaults['c'][:2]}, 'yaxis': {'range': defaults['c'][2:]}}
       }
     # this gets called if a graph has been double clicked on to resume default zoom scale
     else:
-      defaults[index]['c'] = [True,True,True,True]
+      defaults['c'] = [True,True,True,True]
+      defaults_packer(defaults, index)
       return {
         'data':[
             {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
@@ -304,11 +374,12 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
   # we have a chance of getting here from interaction with other components
   # such as the download text or closing the downloads bar in Chrome
   else:
-    defaults[index]['h'][4:] = [False,False]
-    defaults[index]['b'][4:] = [False,False]
-    defaults[index]['d'][4:] = [False,False]
-    defaults[index]['m'][4:] = [False,False]
-    defaults[index]['c'] = [True,True,True,True]
+    defaults['h'][4:] = [False,False]
+    defaults['b'][4:] = [False,False]
+    defaults['d'][4:] = [False,False]
+    defaults['m'][4:] = [False,False]
+    defaults['c'] = [True,True,True,True]
+    defaults_packer(defaults, index)
     return {
       'data':[
           {'x': data_h['date'], 'y': data_h['ml'], 'type': 'line', 'name': 'Main Last Cycle'},
@@ -406,6 +477,8 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
 )
 def download(value, hourly, index):
   has_time = False
+  cursor.execute("select * from prev_c where id = " + str(index))
+  time_bounds = cursor.fetchall()[0][1:3]
   if hourly['layout']['xaxis'].has_key('autorange'):
     start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
     try:
@@ -415,12 +488,12 @@ def download(value, hourly, index):
       cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(hourly['layout']['xaxis']['range'][1]) + "' order by date ASC")
     raw_data_h = cursor.fetchall()
   else:
-    start_date = datetime.strptime(str(defaults[index]['c'][0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
+    start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
     try:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(defaults[index]['c'][1]) + "' order by date ASC, time ASC")
+      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(time_bounds[1]) + "' order by date ASC, time ASC")
       has_time = True
     except:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(defaults[index]['c'][1]) + "' order by date ASC")
+      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(time_bounds[1]) + "' order by date ASC")
     raw_data_h = cursor.fetchall()
 
   data_h = {
@@ -456,9 +529,16 @@ def download(value, hourly, index):
 )
 def assign(o):
   global counter
-  global defaults
+  global cursor
   counter += 1
-  defaults.insert(counter, {'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
+  cursor.execute("insert into prev_m(x_start, x_end, y_start, y_end, x_changed, y_changed) values('True', 'True', 'True', 'True', 0, 0)")
+  cursor.execute("insert into prev_b(x_start, x_end, y_start, y_end, x_changed, y_changed) values('True', 'True', 'True', 'True', 0, 0)")
+  cursor.execute("insert into prev_h(x_start, x_end, y_start, y_end, x_changed, y_changed) values('True', 'True', 'True', 'True', 0, 0)")
+  cursor.execute("insert into prev_d(x_start, x_end, y_start, y_end, x_changed, y_changed) values('True', 'True', 'True', 'True', 0, 0)")
+  cursor.execute("insert into prev_c(x_start, x_end, y_start, y_end) values('True', 'True', 'True', 'True')")
+  cursor.execute("insert into last_picked(picked) values('None')")
+  
+  #defaults.insert(counter, {'lp': None, 'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
   return counter
 
 def main():
@@ -466,7 +546,6 @@ def main():
   global cnx
   global cursor
   global app
-
   j_file = None
   try:
     resource_package = 'DashMetrics'
@@ -503,7 +582,25 @@ def main():
       sys.exit(0)
 
   cnx = mysqldb.connect(i, u, p, d)
+  cnx.autocommit(True)
   cursor = cnx.cursor()
+
+  try:
+    cursor.execute("drop table last_picked")
+    cursor.execute("drop table prev_m")
+    cursor.execute("drop table prev_d")
+    cursor.execute("drop table prev_h")
+    cursor.execute("drop table prev_b")
+    cursor.execute("drop table prev_c")
+  except:
+    pass
+
+  cursor.execute("create table last_picked(id int not null auto_increment, picked char(4), primary key (id))")
+  cursor.execute("create table prev_m(id int not null auto_increment, x_start tinytext, x_end tinytext, y_start tinytext, y_end tinytext, x_changed int, y_changed int, primary key (id))")
+  cursor.execute("create table prev_d(id int not null auto_increment, x_start tinytext, x_end tinytext, y_start tinytext, y_end tinytext, x_changed int, y_changed int, primary key (id))")
+  cursor.execute("create table prev_h(id int not null auto_increment, x_start tinytext, x_end tinytext, y_start tinytext, y_end tinytext, x_changed int, y_changed int, primary key (id))")
+  cursor.execute("create table prev_b(id int not null auto_increment, x_start tinytext, x_end tinytext, y_start tinytext, y_end tinytext, x_changed int, y_changed int, primary key (id))")
+  cursor.execute("create table prev_c(id int not null auto_increment, x_start tinytext, x_end tinytext, y_start tinytext, y_end tinytext, primary key(id))")
 
 # This is used for the day limits when seleting from the date range
   cursor.execute("select date from entries order by date ASC")

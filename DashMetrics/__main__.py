@@ -80,6 +80,7 @@ def parse(in_file, filename):
 def bulk(path):
   with cnx:
     cursor = cnx.cursor()
+#   This table will hold the original data points
     try:
       cursor.execute("create table entries(date DATE, time TIME, main_last INT, backfill_last INT, backfill_mean INT)")
     except:
