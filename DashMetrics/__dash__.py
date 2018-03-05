@@ -664,4 +664,4 @@ def main():
     html.Div(id = 'on_connect', style = {'display': 'none'})
   ])
   app.run_server(debug=True, host=w, port=q)
-main()
+
