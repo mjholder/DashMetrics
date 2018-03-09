@@ -293,7 +293,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
           defaults['m'][0] = m.values()[0]
           defaults['m'][1] = m.values()[1]
           defaults['m'][4] = True
-          if m.values()[2] != defaults['m'][3] or m.values()[3] != defaults['m'][2]:
+          if len(m.values()) > 2 and (m.values()[2] != defaults['m'][3] or m.values()[3] != defaults['m'][2]):
             defaults['m'][3] = m.values()[2]
             defaults['m'][2] = m.values()[3]
             defaults['m'][5] = True
@@ -317,7 +317,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
       defaults[picked][4:] = [True, True]
   except:
     pass
-  
+  print picked
   # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
     defaults['lp'] = picked;
