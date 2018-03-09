@@ -13,13 +13,11 @@ import urllib
 import json
 from dash.dependencies import Input, Output
 
-# defaults is a list of dictionaries that stores each graphs previous range. Index 0 and 1 are the x axis range.
+# defaults is a dictionary that stores each graphs previous range. Index 0 and 1 are the x axis range.
 # 2 and 3 are the y axis range but reversed. Index 4 and 5 are used to say if the
 # corresponding axis was updated in the current date range where 4 is the x
 # axis and 5 is the y axis. 'h' is the hourly graph, 'd' is daily, 'm' is monthly,
 # 'b' is bulk, 'c' is the current range that every graph is compated too.
-# TODO: make defaults a table in the database rather than variable in this file
-# defaults = []
 cnx = None
 cursor = None
 app = dash.Dash()
@@ -591,7 +589,6 @@ def assign(o):
   cursor.execute("insert into prev_c(x_start, x_end, y_start, y_end) values('True', 'True', 'True', 'True')")
   cursor.execute("insert into last_picked(picked) values('None')")
   
-  #defaults.insert(counter, {'lp': None, 'h': [True, True, True, True, False, False], 'd': [True, True, True, True, False, False], 'm': [True, True, True, True, False, False], 'b': [True, True, True, True, False, False], 'c': [True, True, True, True]})
   return counter
 
 def main():
