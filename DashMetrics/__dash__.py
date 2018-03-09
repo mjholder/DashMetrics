@@ -317,7 +317,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
       defaults[picked][4:] = [True, True]
   except:
     pass
-  print picked
+
   # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
     defaults['lp'] = picked;
@@ -466,12 +466,20 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
     }
 
 @app.callback(
+  Output(component_id = 'download', component_property = 'download'),
+  [Input(component_id = 'file-format', component_property = 'value')]
+)
+def download_format(fformat):
+  return 'data.' + fformat
+
+@app.callback(
   Output(component_id = 'download', component_property = 'href'),
   [Input(component_id = 'graph-select', component_property = 'value'),
    Input(component_id = 'hourly', component_property = 'figure'),
-   Input(component_id = 'my_index', component_property = 'children')]
+   Input(component_id = 'my_index', component_property = 'children'),
+   Input(component_id = 'file-format', component_property = 'value')]
 )
-def download(value, hourly, index):
+def download(value, hourly, index, fformat):
   has_time = False
   cursor.execute("select * from prev_c where id = %s", [index])
   time_bounds = cursor.fetchall()[0][1:3]
@@ -567,8 +575,12 @@ def download(value, hourly, index):
       data_h['bm'].append(point[3])
 
   df = pd.DataFrame(data_h)
-  csv_string = df.to_csv(index = False, encoding = 'utf-8')
+  if fformat == 'csv':
+    csv_string = df.to_csv(index = False, encoding = 'utf-8')
+  elif fformat == 'json':
+    csv_string = df.to_json()
   csv_string = "data:text/csv;charset=utf-8," + urllib.quote(csv_string)
+  
   return csv_string
 
 # this assigns each new client a counter number and saves that number to defaults
@@ -688,7 +700,22 @@ def main():
       value = 'monthly'
     ),
 
-    html.A(children = 'Click to download', id = 'download', download = 'data.csv', href = '', target = '_blank'),
+    html.Label('Select download format'),
+
+    dcc.Dropdown(
+      id = 'file-format',
+      options = [{'label': 'CSV', 'value': 'csv'},
+                 {'label': 'JSON', 'value': 'json'}],
+      value = 'csv'
+    ),
+
+    html.A(
+      children = 'Click to download',
+      id = 'download',
+      download = 'data.csv',
+      href = '',
+      target = '_blank'
+    ),
 
     dcc.Graph(
       id = 'monthly',
@@ -714,4 +741,4 @@ def main():
     html.Div(id = 'on_connect', style = {'display': 'none'})
   ])
   app.run_server(debug=True, host=w, port=q)
-
+main()
