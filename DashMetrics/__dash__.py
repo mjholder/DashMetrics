@@ -52,7 +52,7 @@ def usage():
    Input(component_id = 'hourly', component_property = 'figure')]
 )
 def update_daily(end_date, start_date, h, d, m, b, figure):
-  cursor.execute("select * from daily where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
+  cursor.execute("select * from daily where date between %s and %s", [start_date, end_date])
   data = cursor.fetchall()
   data_t = {
     'date': [],
@@ -98,7 +98,7 @@ def update_daily(end_date, start_date, h, d, m, b, figure):
 def update_monthly(end_date, start_date, h, d, m, b, figure):
   if start_date[-2:] != '01':
     start_date = start_date[:-2] + '01'
-  cursor.execute("select * from monthly where date between '" + str(start_date) + "' and '" + str(end_date) + "'")
+  cursor.execute("select * from monthly where date between %s and %s", [start_date, end_date])
   raw_data_m = cursor.fetchall()
 
   data_m = {
@@ -134,7 +134,7 @@ def update_monthly(end_date, start_date, h, d, m, b, figure):
 def defaults_unpacker(values):
   output = []
   for v in range(0, 4):
-    if values[v] == 'True':
+    if values[v] == 'True' or values[v] == '1':
       output.append(True)
     else:
       try:
@@ -148,16 +148,15 @@ def defaults_unpacker(values):
   except IndexError:
     # This only happens for prev_c which doesn't have x_changed and y_changed 
     pass
-
   return output
 
 def defaults_packer(defaults, index):
-  cursor.execute("replace into prev_m(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['m'][0]) + "', '" + str(defaults['m'][1])+ "', '" + str(defaults['m'][2]) + "', '" + str(defaults['m'][3]) + "', " + str(int(defaults['m'][4])) + ", " + str(int(defaults['m'][5])) + ")")
-  cursor.execute("replace into prev_h(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['h'][0]) + "', '" + str(defaults['h'][1])+ "', '" + str(defaults['h'][2]) + "', '" + str(defaults['h'][3]) + "', " + str(int(defaults['h'][4])) + ", " + str(int(defaults['h'][5])) + ")")
-  cursor.execute("replace into prev_d(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['d'][0]) + "', '" + str(defaults['d'][1])+ "', '" + str(defaults['d'][2]) + "', '" + str(defaults['d'][3]) + "', " + str(int(defaults['d'][4])) + ", " + str(int(defaults['d'][5])) + ")")
-  cursor.execute("replace into prev_b(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(" + str(index) + ",'" + str(defaults['b'][0]) + "', '" + str(defaults['b'][1])+ "', '" + str(defaults['b'][2]) + "', '" + str(defaults['b'][3]) + "', " + str(int(defaults['b'][4])) + ", " + str(int(defaults['b'][5])) + ")")
-  cursor.execute("replace into prev_c(id, x_start, x_end, y_start, y_end) values(" + str(index) + ",'" + str(defaults['c'][0]) + "', '" + str(defaults['c'][1])+ "', '" + str(defaults['c'][2]) + "', '" + str(defaults['c'][3]) + "')")
-  cursor.execute("replace into last_picked(id, picked) values(" + str(index) + ", '" + str(defaults['lp']) + "')")
+  cursor.execute("replace into prev_m(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(%s, %s, %s, %s, %s, %s, %s)", [index, defaults['m'][0], defaults['m'][1], defaults['m'][2], defaults['m'][3], defaults['m'][4], defaults['m'][5]])
+  cursor.execute("replace into prev_h(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(%s, %s, %s, %s, %s, %s, %s)", [index, defaults['h'][0], defaults['h'][1], defaults['h'][2], defaults['h'][3], defaults['h'][4], defaults['h'][5]])
+  cursor.execute("replace into prev_d(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(%s, %s, %s, %s, %s, %s, %s)", [index, defaults['d'][0], defaults['d'][1], defaults['d'][2], defaults['d'][3], defaults['d'][4], defaults['d'][5]])
+  cursor.execute("replace into prev_b(id, x_start, x_end, y_start, y_end, x_changed, y_changed) values(%s, %s, %s, %s, %s, %s, %s)", [index, defaults['b'][0], defaults['b'][1], defaults['b'][2], defaults['b'][3], defaults['b'][4], defaults['b'][5]])
+  cursor.execute("replace into prev_c(id, x_start, x_end, y_start, y_end) values(%s, %s, %s, %s, %s)", [index, defaults['c'][0], defaults['c'][1], defaults['c'][2], defaults['c'][3]])
+  cursor.execute("replace into last_picked(id, picked) values(%s, %s)", [index, defaults['lp']])
 
 # Hourly
 @app.callback(
@@ -181,29 +180,29 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
     'lp': ''
   }
 
-  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_h where id = " + str(index))
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_h where id = %s", [index])
   defaults['h'] = defaults_unpacker(cursor.fetchall()[0])
 
-  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_b where id = " + str(index))
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_b where id = %s", [index])
   defaults['b'] = defaults_unpacker(cursor.fetchall()[0])
 
-  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_d where id = " + str(index))
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_d where id = %s", [index])
   defaults['d'] = defaults_unpacker(cursor.fetchall()[0])
 
-  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_m where id = " + str(index))
+  cursor.execute("select x_start, x_end, y_start, y_end, x_changed, y_changed from prev_m where id = %s", [index])
   defaults['m'] = defaults_unpacker(cursor.fetchall()[0])
 
-  cursor.execute("select x_start, x_end, y_start, y_end from prev_c where id = " + str(index))
+  cursor.execute("select x_start, x_end, y_start, y_end from prev_c where id = %s", [index])
   defaults['c'] = defaults_unpacker(cursor.fetchall()[0])
 
-  cursor.execute("select picked from last_picked where id = " + str(index))
+  cursor.execute("select picked from last_picked where id = %s", [index])
   lp = cursor.fetchall()[0][0]
   if lp == 'None':
     defaults['lp'] = None
   else:
     defaults['lp'] = lp
   
-  cursor.execute("select * from hourly where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
+  cursor.execute("select * from hourly where date between %s and %s order by date ASC, time ASC", [start_date, end_date])
   raw_data_h = cursor.fetchall()
   data_h = {
     'date': [],
@@ -236,7 +235,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
             defaults['b'][5] = True
           picked = 'b'
       elif type(b.values()[0]) == float:
-        if defaults['b'][3] != b.values()[0] or my_defaults['b'][2] != b.values()[1]:
+        if int(defaults['b'][3]) != int(b.values()[0]) or int(my_defaults['b'][2]) != int(b.values()[1]):
           defaults['b'][3] = b.values()[0]
           defaults['b'][2] = b.values()[1]
           defaults['b'][5] = True
@@ -258,7 +257,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
             defaults['h'][5] = True
           picked = 'h'
       elif type(h.values()[0]) == float:
-        if defaults['h'][3] != h.values()[0] or defaults['h'][2] != h.values()[1]:
+        if int(defaults['h'][3]) != int(h.values()[0]) or int(defaults['h'][2]) != int(h.values()[1]):
           defaults['h'][3] = h.values()[0]
           defaults['h'][2] = h.values()[1]
           defaults['h'][5] = True
@@ -280,7 +279,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
             defaults['d'][5] = True
           picked = 'd'
       elif type(d.values()[0]) == float:
-        if defaults['d'][3] != d.values()[0] or defaults['d'][2] != d.values()[1]:
+        if int(defaults['d'][3]) != int(d.values()[0]) or int(defaults['d'][2]) != int(d.values()[1]):
           defaults['d'][3] = d.values()[0]
           defaults['d'][2] = d.values()[1]
           defaults['d'][5] = True
@@ -302,7 +301,7 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
             defaults['m'][5] = True
           picked = 'm'
       elif type(m.values()[0]) == float:
-        if defaults['m'][3] != m.values()[0] or defaults['m'][2] != m.values()[1]:
+        if int(defaults['m'][3]) != int(m.values()[0]) or int(defaults['m'][2]) != int(m.values()[1]):
           defaults['m'][3] = m.values()[0]
           defaults['m'][2] = m.values()[1]
           defaults['m'][5] = True
@@ -314,14 +313,13 @@ def update_hourly(end_date, start_date, h, d, m, b, index, ranges):
 
   except IndexError:
     picked = None
-  
   try:
     if len(m.values()) == 1 and len(h.values()) == 1 and len(b.values()) == 1 and len(d.values()) == 1:
       picked = defaults['lp']
       defaults[picked][4:] = [True, True]
   except:
     pass
-
+  
   # if the callback was triggered by zooming picked equals which graph was zoomed in on
   if picked != None:
     defaults['lp'] = picked;
@@ -415,7 +413,7 @@ def show_bulk(values):
 )
 def update_bulk(end_date, start_date, values, h, d, m, b, figure):
   if 'active' in values:
-    cursor.execute("select * from entries where date between '" + str(start_date) + "' and '" + str(end_date) + "' order by date ASC, time ASC")
+    cursor.execute("select * from entries where date between %s and %s order by date ASC, time ASC", [start_date, end_date])
     data = cursor.fetchall()
     data_t = {
       'date': [],
@@ -477,24 +475,79 @@ def update_bulk(end_date, start_date, values, h, d, m, b, figure):
 )
 def download(value, hourly, index):
   has_time = False
-  cursor.execute("select * from prev_c where id = " + str(index))
+  cursor.execute("select * from prev_c where id = %s", [index])
   time_bounds = cursor.fetchall()[0][1:3]
-  if hourly['layout']['xaxis'].has_key('autorange'):
-    start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
-    try:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(hourly['layout']['xaxis']['range'][1]) + "' order by date ASC, time ASC")
-      has_time = True
-    except:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(hourly['layout']['xaxis']['range'][1]) + "' order by date ASC")
-    raw_data_h = cursor.fetchall()
-  else:
-    start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
-    try:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(time_bounds[1]) + "' order by date ASC, time ASC")
-      has_time = True
-    except:
-      cursor.execute("select * from " + value + " where date between '" + str(start_date) + "' and '" + str(time_bounds[1]) + "' order by date ASC")
-    raw_data_h = cursor.fetchall()
+  if value == 'monthly':
+    if hourly['layout']['xaxis'].has_key('autorange'):
+      start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
+      try:
+        cursor.execute("select * from monthly where date between %s and %s order by date ASC, time ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+        has_time = True
+      except:
+        cursor.execute("select * from monthly where date between %s and %s order by date ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+      raw_data_h = cursor.fetchall()
+    else:
+      start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
+      try:
+        cursor.execute("select * from monthly where date between %s and %s order by date ASC, time ASC", [start_date, time_bounds[1]])
+        has_time = True
+      except:
+        cursor.execute("select * from monthly where date between %s and %s order by date ASC", [start_date, time_bounds[1]])
+      raw_data_h = cursor.fetchall()
+
+  elif value == 'daily':
+    if hourly['layout']['xaxis'].has_key('autorange'):
+      start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
+      try:
+        cursor.execute("select * from daily where date between %s and %s order by date ASC, time ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+        has_time = True
+      except:
+        cursor.execute("select * from daily where date between %s and %s order by date ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+      raw_data_h = cursor.fetchall()
+    else:
+      start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
+      try:
+        cursor.execute("select * from daily where date between %s and %s order by date ASC, time ASC", [start_date, time_bounds[1]])
+        has_time = True
+      except:
+        cursor.execute("select * from daily where date between %s and %s order by date ASC", [start_date, time_bounds[1]])
+      raw_data_h = cursor.fetchall()
+
+  elif value == 'hourly':
+    if hourly['layout']['xaxis'].has_key('autorange'):
+      start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
+      try:
+        cursor.execute("select * from hourly where date between %s and %s order by date ASC, time ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+        has_time = True
+      except:
+        cursor.execute("select * from hourly where date between %s and %s order by date ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+      raw_data_h = cursor.fetchall()
+    else:
+      start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
+      try:
+        cursor.execute("select * from hourly where date between %s and %s order by date ASC, time ASC", [start_date, time_bounds[1]])
+        has_time = True
+      except:
+        cursor.execute("select * from hourly where date between %s and %s order by date ASC", [start_date, time_bounds[1]])
+      raw_data_h = cursor.fetchall()
+
+  elif value == 'entries':
+    if hourly['layout']['xaxis'].has_key('autorange'):
+      start_date = datetime.strptime(str(hourly['layout']['xaxis']['range'][0]), '%Y-%m-%d %H:%M:%S') - timedelta(days=1)
+      try:
+        cursor.execute("select * from entries where date between %s and %s order by date ASC, time ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+        has_time = True
+      except:
+        cursor.execute("select * from entries where date between %s and %s order by date ASC", [start_date, hourly['layout']['xaxis']['range'][1]])
+      raw_data_h = cursor.fetchall()
+    else:
+      start_date = datetime.strptime(str(time_bounds[0]), '%Y-%m-%d %H:%M:%S.%f') - timedelta(days=1)
+      try:
+        cursor.execute("select * from entries where date between %s and %s order by date ASC, time ASC", [start_date, time_bounds[1]])
+        has_time = True
+      except:
+        cursor.execute("select * from entries where date between %s and %s order by date ASC", [start_date, time_bounds[1]])
+      raw_data_h = cursor.fetchall()
 
   data_h = {
     'date': [],
@@ -664,4 +717,4 @@ def main():
     html.Div(id = 'on_connect', style = {'display': 'none'})
   ])
   app.run_server(debug=True, host=w, port=q)
-
+main()
