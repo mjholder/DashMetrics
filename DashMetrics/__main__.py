@@ -211,7 +211,6 @@ def main():
   for opt in opts:
     if opt[0] == '-c':
       j_file_path = opt[1]
-      break
 
   try:
     if j_file_path == '':
@@ -220,7 +219,7 @@ def main():
       conf = pkg_resources.resource_stream(resource_package, resource_path)
       j_file = json.load(conf)
     else:
-      j_file = json.load(conf)
+      j_file = json.load(open(j_file_path))
   except:
     print 'ERROR: config.json is missing. Make sure config.json is in the'
     print 'statics directory when packaging or no config.json in specified path.'
