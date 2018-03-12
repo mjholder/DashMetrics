@@ -52,7 +52,8 @@ It takes, on average, 2 minutes for dm_populate to add 130,000 entries.
 -u        The username for accessing the database.
           Default username is 'root'
 -p        The password for accessing the database.
--d        Specify the name of the database. (Required)
+-d        Specify the name of the database. Default is sdiag.
+-c        Specify a path to load a custom config.json.
 -h        Displays this message and quits.
 ```
 dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default.
@@ -68,7 +69,8 @@ dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default.
 -u        The username for accessing the database.
           Default username is 'root'.
 -p        The password for accessing the database.
--d        The name of the database (Required)
+-d        The name of the database. Default is sdiag.
+-c        Specify a path to load a custom config.json.
 -h        Displays this message and quits.
 ```
 When viewing the dash, the "All Points" graph is disabled by default due to it's tendencies to take a while to load/update.
