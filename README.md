@@ -56,7 +56,9 @@ It takes, on average, 2 minutes for dm_populate to add 130,000 entries.
 -c        Specify a path to load a custom config.json.
 -h        Displays this message and quits.
 ```
-dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default.
+dm_dash runs the dash webapp. This is hosted on 0.0.0.0:8050 by default. This also fill the specified database with
+6 tables that are used to store and compare data returned from users visiting the website. These tables get reset
+each time dm_dash is started and each user has their own row.
 ```
 # dm_dash -h
 
