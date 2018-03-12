@@ -16,6 +16,7 @@ def usage():
   print "           Default username is 'root'"
   print " -p        The password for accessing the database."
   print " -d        Specify the name of the database. Default is sdiag"
+  print " -c        Specify a path to load a custom config.json."
   print " -h        Displays this message and quits."
 
 # this takes data from an input file and places the data into the entries table
@@ -205,13 +206,24 @@ def main():
   opts, _ = getopt(sys.argv[1:], "f:i:u:p:d:h")
   global cnx
   j_file = None
+  j_file_path = ''
+
+  for opt in opts:
+    if opt[0] == '-c':
+      j_file_path = opt[1]
+      break
+
   try:
-    resource_package = 'DashMetrics'
-    resource_path = '/'.join(('statics', 'config.json'))
-    conf = pkg_resources.resource_stream(resource_package, resource_path)
-    j_file = json.load(conf)
+    if j_file_path == '':
+      resource_package = 'DashMetrics'
+      resource_path = '/'.join(('statics', 'config.json'))
+      conf = pkg_resources.resource_stream(resource_package, resource_path)
+      j_file = json.load(conf)
+    else:
+      j_file = json.load(conf)
   except:
-    print "ERROR: config.json not found."
+    print 'ERROR: config.json is missing. Make sure config.json is in the'
+    print 'statics directory when packaging or no config.json in specified path.'
     return
 
   f = j_file['directory']
