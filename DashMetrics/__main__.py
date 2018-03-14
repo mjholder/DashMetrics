@@ -203,7 +203,7 @@ def monthly():
 
 # main controlling function
 def main():
-  opts, _ = getopt(sys.argv[1:], "f:i:u:p:d:h")
+  opts, _ = getopt(sys.argv[1:], "f:i:u:p:c:d:h")
   global cnx
   j_file = None
   j_file_path = ''
