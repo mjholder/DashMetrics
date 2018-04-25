@@ -21,7 +21,7 @@ counter = 0
 app.config['suppress_callback_exceptions'] = True
 
 def parse_data(data):
-  output = {'x':[], 'y':[]}
+  output = {'x':[], 'y':[], type: 'bar'}
   for d in data:
     output['y'].append(d[13])
     output['x'].append(d[1])
@@ -38,7 +38,7 @@ def update_figure(rows, selected_row_indices):
   fig = plotly.tools.make_subplots(
     rows = 3, cols = 1,
     subplot_titles = ('CPUs', 'Minimum CPUs', 'Nodes'),
-    shared_xaxes = True
+    shared_xaxes = True,
   )
   marker = {'color': ['#0074D9'] * len(dff)}
   for i in (selected_row_indices or []):
